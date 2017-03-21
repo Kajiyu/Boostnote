@@ -8,6 +8,7 @@ import flowchart from 'flowchart'
 import SequenceDiagram from 'js-sequence-diagrams'
 import eventEmitter from 'browser/main/lib/eventEmitter'
 import fs from 'fs'
+import markdownpdf from 'markdown-pdf'
 
 function decodeHTMLEntities (text) {
   var entities = [
@@ -97,6 +98,7 @@ export default class MarkdownPreview extends React.Component {
     this.checkboxClickHandler = (e) => this.handleCheckboxClick(e)
     this.saveAsTextHandler = () => this.handleSaveAsText()
     this.saveAsMdHandler = () => this.handleSaveAsMd()
+    this.saveAsPdfHandler = () => this.handleSaveAsPdf()
   }
 
   handlePreviewAnchorClick (e) {
@@ -149,6 +151,10 @@ export default class MarkdownPreview extends React.Component {
     this.exportAsDocument('md')
   }
 
+  handleSaveAsPdf () {
+    this.exportAsDocument('pdf')
+  }
+
   exportAsDocument (fileType) {
     const options = {
       filters: [
@@ -159,9 +165,13 @@ export default class MarkdownPreview extends React.Component {
     dialog.showSaveDialog(remote.getCurrentWindow(), options,
     (filename) => {
       if (filename) {
-        fs.writeFile(filename, this.props.value, (err) => {
-          if (err) throw err
-        })
+        if (fileType === 'pdf') {
+          markdownpdf().from.string(this.props.value).to(filename, function () {})
+        } else {
+          fs.writeFile(filename, this.props.value, (err) => {
+            if (err) throw err
+          })
+        }
       }
     })
   }
@@ -185,6 +195,7 @@ export default class MarkdownPreview extends React.Component {
     this.refs.root.contentWindow.document.addEventListener('dragover', this.preventImageDroppedHandler)
     eventEmitter.on('export:save-text', this.saveAsTextHandler)
     eventEmitter.on('export:save-md', this.saveAsMdHandler)
+    eventEmitter.on('export:save-pdf', this.saveAsPdfHandler)
   }
 
   componentWillUnmount () {
@@ -195,6 +206,7 @@ export default class MarkdownPreview extends React.Component {
     this.refs.root.contentWindow.document.removeEventListener('dragover', this.preventImageDroppedHandler)
     eventEmitter.off('export:save-text', this.saveAsTextHandler)
     eventEmitter.off('export:save-md', this.saveAsMdHandler)
+    eventEmitter.off('export:save-pdf', this.saveAsPdfHandler)
   }
 
   componentDidUpdate (prevProps) {
